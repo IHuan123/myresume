@@ -42,8 +42,6 @@ header{
 	z-index:9;
 }
 
-
-
 header .nav-opt{
     display:flex;
     justify-content:center;
@@ -108,9 +106,6 @@ header .nav-search ul li:first-child input{
 header .nav-search ul li:first-child i{
     cursor:pointer;
 }
-
-
-
 
 
 
