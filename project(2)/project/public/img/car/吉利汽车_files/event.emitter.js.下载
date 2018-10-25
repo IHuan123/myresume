@@ -1,0 +1,41 @@
+﻿!function () {
+    var EventEmitter = window.EventEmitter = function () {
+        this.listeners = {};
+    }
+    EventEmitter.prototype = {
+        on: function (type, listener, once) {
+            if (!this.listeners[type]) {
+                this.listeners[type] = [];
+            }
+            listener.once = once;
+            this.listeners[type].push(listener);
+        },
+        off: function (type, listener) {
+            var thisEvent = this.listeners[type];
+            if (thisEvent) {
+                if (!listener) {
+                    delete thisEvent;
+                } else {
+                    var index = this.listeners[type].indexOf(listener);
+                    this.listeners[type].splice(index, 1);
+                }
+            }
+        },
+        emit: function (type, params) {
+            var self = this, onceIndexs = [];
+            var listener = self.listeners[type];
+            if (listener) {
+                listener.forEach(function (l, i) {
+                    l && l.call(self, params);
+                    if (l.once) {
+                        onceIndexs.push(i);
+                    }
+                });
+                listener = listener.filter(function (l, i) {
+                    onceIndexs.indexOf(i) == -1;
+                });
+            }
+        }
+    }
+    return EventEmitter;
+}();

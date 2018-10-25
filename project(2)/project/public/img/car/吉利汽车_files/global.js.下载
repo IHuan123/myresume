@@ -1,0 +1,571 @@
+﻿/// <reference path="../libs/hammer.min.js" />
+/// <reference path="../libs/jquery.hammer.js" />
+!function ($, win) {
+    var templates = {
+        build: function (tpl, contents) {
+            var result = tpl;
+            for (var prop in contents) {
+                result = result.replace(new RegExp("{" + prop + "}", "ig"), contents[prop] || "");
+            }
+            return result;
+        },
+        dlg: {
+            alert: '<div class="dlg dlg-alert {dlgClass}">\
+                <span class="close"><i class="glfico-close1"></i></span>\
+                <div class="dlg-content">\
+                    <i class="{icon}"></i>\
+                    <div class="alert-content">\
+                        <p>{title}</p>\
+                        <span>{content}</span>\
+                    </div>\
+                </div>\
+                <div class="dlg-footer">\
+                    <button class="btn btn-close {btnClass}">{btnText}</button>\
+                </div>\
+            </div>'
+        }
+    }
+    var utils = window.utils = {
+        browserInfo: (function () {
+            var userAgent = navigator.userAgent,
+                rMsie = /(msie\s|trident\/7)([\w.]+)/,
+                rTrident = /(trident)\/([\w.]+)/,
+                rFirefox = /(firefox)\/([\w.]+)/,
+                rOpera = /(opera).+version\/([\w.]+)/,
+                rNewOpera = /(opr)\/(.+)/,
+                rChrome = /(chrome)\/([\w.]+)/,
+                rSafari = /version\/([\w.]+).*(safari)/,
+                rEdge = /(edge)\/([\w.]+)/;
+            var matchBS, matchBS2;
+            var browser;
+            var version;
+            var ua = userAgent.toLowerCase();
+            var uaMatch = function (ua) {
+                matchBS = rMsie.exec(ua);
+                if (matchBS != null) {
+                    matchBS2 = rTrident.exec(ua);
+                    if (matchBS2 != null) {
+                        switch (matchBS2[2]) {
+                            case "4.0": return { browser: "IE", version: "8" }; break;
+                            case "5.0": return { browser: "IE", version: "9" }; break;
+                            case "6.0": return { browser: "IE", version: "10" }; break;
+                            case "7.0": return { browser: "IE", version: "11" }; break;
+                            default: return { browser: "IE", version: "undefined" };
+                        }
+                    }
+                    else
+                        return { browser: "IE", version: matchBS[2] || "0" };
+                }
+                matchBS = rFirefox.exec(ua);
+                if ((matchBS != null) && (!(window.attachEvent)) && (!(window.chrome)) && (!(window.opera))) {
+                    return { browser: matchBS[1] || "", version: matchBS[2] || "0" };
+                }
+                matchBS = rOpera.exec(ua);
+                if ((matchBS != null) && (!(window.attachEvent))) {
+                    return { browser: matchBS[1] || "", version: matchBS[2] || "0" };
+                }
+                matchBS = rChrome.exec(ua);
+                if ((matchBS != null) && (!!(window.chrome)) && (!(window.attachEvent))) {
+                    matchBS2 = rNewOpera.exec(ua);
+                    if (matchBS2 == null)
+                        return { browser: matchBS[1] || "", version: matchBS[2] || "0" };
+                    else
+                        return { browser: "Opera", version: matchBS2[2] || "0" };
+                }
+                matchBS = rSafari.exec(ua);
+                if ((matchBS != null) && (!(window.attachEvent)) && (!(window.chrome)) && (!(window.opera))) {
+                    return { browser: matchBS[2] || "", version: matchBS[1] || "0" };
+                }
+                matchBS = rEdge.exec(ua);
+                if(matchBS != null && window.windowIsDefined){
+                    return { browser: "Edge", version: matchBS2[2] || "0" };
+                }
+                if (matchBS != null) {
+                    return { browser: "undefined", version: " browser" };
+                }
+            }
+            var browserMatch = uaMatch(userAgent.toLowerCase()) || {};
+            return browserMatch;
+        })(),
+        getDoc: function () {
+            if (browserInfo.edge() || browserInfo.safari() || browserInfo.wx()) {
+                return document.body;
+            } else {
+                return window.webkitCancelAnimationFrame || browserInfo.ie() ? document.documentElement : document.body;
+            }
+        },
+        getRootSize: function () {
+            var str = $("html").css("font-size");
+            return Number(str.substr(0, str.length - 2));
+        },
+        extend: function (base, me, context, args) {
+            base.apply(context, args);
+            me.superClass = base;
+            utils.appendProperties(me.prototype, base.prototype);
+        },
+        appendProperties: function (obj, props) {
+            for (var prop in props) {
+                obj[prop] = props[prop];
+            }
+        },
+        loadImage: function (src,onload) {
+            var img = document.createElement("img");
+            img.src = src;
+            img.onload = function (e) {
+                onload && onload.call(this, img);
+            };
+        },
+        openWxShareQrCode: function (qrcode, title, desc) {
+            var closeCb;
+            var html = '<div class="wx-share-box">\
+                <div class="title">\
+                    <span>'+ (title || '分享到微信朋友圈') + '</span>\
+                    <span class="close">\
+                        <i class="glfico-close1"></i>\
+                    </span>\
+                </div>\
+                <div class="body"><img src="' + qrcode + '" /></div>\
+                <div class="footer">\
+                    '+ (desc || '打开微信，点击底部的“发现”，使用 “扫一扫” 即可将网页分享到我的朋友圈。 如何使用？') + '\
+                </div>\
+            </div>';
+            var $wxShareBox = $(html).appendTo(document.body).addClass("active");
+            mask.open();
+            var closeBox = function () {
+                $wxShareBox.removeClass("active");
+                closeCb && closeCb();
+                setTimeout(function () {
+                    $wxShareBox.remove();
+                }, 200);
+            };
+            mask.on("close", closeBox, true);
+            $(".close", $wxShareBox).smartClick(function () {
+                closeBox();
+                mask.close();
+            });
+            return {
+                then: function (_closeCb) {
+                    closeCb = _closeCb;
+                }
+            }
+        },
+        getFullscreenEle: function () {
+            return document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement;
+        },
+        requestFullScreen: function (ele) {
+            if (ele.requestFullscreen) {
+                ele.requestFullscreen();
+            }
+            else if (ele.mozRequestFullScreen) {
+                ele.mozRequestFullScreen();
+            }
+            else if (ele.msRequestFullscreen) {
+                ele.msRequestFullscreen();
+            }
+            else if (ele.webkitRequestFullscreen) {
+                ele.webkitRequestFullScreen();
+            }
+        },
+        exitFullScreen: function () {
+            if (!!utils.getFullscreenEle()) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozExitFullscreen) {
+                    document.mozExitFullscreen();
+                } else if (document.webkitCancelFullScreen) {
+                    document.webkitCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        },
+        onFullscreenChange: function (func) {
+            document.addEventListener("fullscreenchange", func);
+            document.addEventListener("mozfullscreenchange", func);
+            document.addEventListener("webkitfullscreenchange", func);
+            document.addEventListener("msfullscreenchange", func);
+            document.addEventListener("mozfullscreenchange", func);
+        }
+    };
+    $.fn.extend({
+        smartClick: function (callback) {
+            var self = this,$this = $(this);
+            //$this.on("touchstart", function (e) {
+            //    this.touched = true;
+            //});
+            //$this.on("touchend", function (e) {
+            //    if (this.touched) {
+            //        this.smartTrigged = true;
+            //        setTimeout(function () {
+            //            callback && callback.call(self, e, self);
+            //        }, 100);
+            //        setTimeout(function () {
+            //            self.smartTrigged = false;
+            //        }, 500);
+            //        return false;
+            //    }
+            //});
+            $this.hammer().on("tap", function (e) {
+                var self = this;
+                callback && callback.call(this, e,e.target);
+                this.smartTrigged = true;
+                setTimeout(function () {
+                    self.smartTrigged = false;
+                }, 500);
+                return false;
+            });
+            $this.on("click", function (e) {
+                if (!this.smartTrigged) {
+                    callback && callback.call(this, e, e.target);
+                }
+            });
+            //var bindEvents = function () {
+            //    if (deviceInfo.isPc()) {
+            //        $this.hammer().off("tap", callback);
+            //        $this.on("click", callback);
+            //    } else {
+            //        $this.hammer().on("tap", callback);
+            //        $this.off("click", callback);
+            //    }
+            //}.bind(this);
+            //$(win).on("resize", bindEvents);
+            //bindEvents();
+        }
+    });
+    var Mask = function () {
+        var self = this;
+        self.eventReged = false;
+        utils.extend(EventEmitter, Mask, self);
+    }
+    Mask.prototype.open = function(){
+        var self = this;
+        var $mask = $(".mask");
+        if ($mask.length == 0) {
+            $mask = $('<div class="mask"></div>').appendTo(document.body);
+        }
+        if ($mask.is(":animated")) {
+            $mask.stop();
+        }
+        if (!$mask.is(":visible")) {
+            $mask.fadeIn(200);
+        }
+        if (!self.eventReged) {
+            self._regEvents();
+            $(window).on("resize", debounce(self._regEvents.bind(self), 100));
+            self.eventReged = true;
+        }
+    }
+    Mask.prototype.close = function(){
+        var $mask = $(".mask");
+        if ($mask.is(":visible")) {
+            $(".mask").fadeOut(200);
+            console.log("a");
+        }
+    }
+    Mask.prototype.isOpened = function () {
+        return $(".mask").is("visible");
+    }
+    Mask.prototype._regEvents = function () {
+        var self = this;
+        var $mask = $(".mask");
+        if (deviceInfo.isPc()) {
+            $mask.off("touchstart");
+            $mask.on("click", function (e) {
+                self.emit("close");
+                self.close();
+            });
+        } else if (deviceInfo.isMobile()) {
+            $mask.off("click");
+            $mask.on("touchstart", function (e) {
+                self.emit("close");
+                self.close();
+            });
+        }
+    }
+    var mask = window.mask = new Mask();
+    //Array.prototype.remove = function (predicate) {
+    //    var spliceIndexs = [];
+    //    for (var i = 0; i < this.length; i++) {
+    //        if (predicate.call(this[i], i, this[i])) {
+    //            spliceIndexs.push(i);
+    //        }
+    //    }
+    //    for (var j = 0, len = spliceIndexs.length; j < len; j++) {
+    //        this.splice(spliceIndexs[j] - j, 1);
+    //    }
+    //}
+    $(function () {
+        var logo = $(document.body).data("logo");
+        if (!!logo) {
+            $("header .logo img").prop("src", logo);
+            $("header .logo").show();
+        }
+        if (utils.browserInfo.browser == "IE" && utils.browserInfo.version < 11) {
+            $(".ie-warning-box").fadeIn(200);
+            mask.open();
+        }
+        $(".ie-warning-box .close").on("click", function () {
+            $(".ie-warning-box").fadeOut(200);
+            mask.close();
+        });
+        mask.on("close", function () {
+            $(".ie-warning-box:visible").fadeOut(200);
+        });
+        $(document).on("click", ".ddl>a", function () {
+            var $this = $(this);
+            $this.parents(".ddl").toggleClass("open");
+            if ($(window).height() - $this.offset().top < $this.next(".ddl-body").height()) {
+                $this.next(".ddl-body").addClass("at-top");
+            } else {
+                $this.next(".ddl-body").removeClass("at-top");
+            }
+        });
+        $(document).on("click", ".ddl>.ddl-body>ul>li", function () {
+            var $this = $(this), $ddl = $this.parents(".ddl");
+            $this.addClass("active").siblings().removeClass("active");
+            $this.parents(".ddl").removeClass("open");
+            $("a>span", $ddl).text($this.data("text"));
+            $ddl.trigger("select", {
+                text: $this.data("text"),
+                value: $this.data("value")
+            });
+        });
+        $(document).on("click", function (e) {
+            var $openDdls = $(".ddl.open");
+            $openDdls.each(function (i, item) {
+                var $item = $(item);
+                if (!$item.is(e.target) && $item.find(e.target).length == 0) {
+                    $openDdls.removeClass("open");
+                }
+            });
+        });
+        $(document).on("click", ".ddl .filter>a", function () {
+            var $this = $(this), $ddl = $this.parents(".ddl");;
+            $this.toggleClass("active").siblings("a").removeClass("active");
+            $ddl.trigger("sort", {
+                key: $this.data("sort-key")
+            })
+        });
+        $(".share-btns .share-btn.like").hammer().on("click", function (e) {
+            return false;
+        });
+        $(".share-btns .share-btn.like").hammer().on("tap", function (e) {
+            var $this = $(this), $i = $this.find("i"),$span = $this.find("span");
+            if ($this.hasClass("active")) {
+                $this.removeClass("active");
+                $i.removeClass("glfico-xin").addClass("glfico-xin1");
+                $span.html($span.text() - 1);
+            } else {
+                $this.addClass("active");
+                $i.removeClass("glfico-xin1").addClass("glfico-xin");
+                $span.html($span.text() - 0 + 1);
+            }
+        });
+        $("video").on("contextmenu", function () {
+            return false;
+        });
+        $(".forbid-landscape").appendTo(document.body);
+        window.addEventListener("resize", debounce(function () {
+            mediaFn();
+        }, 150));
+        setTimeout(mediaFn, 150);
+    });
+    //防抖函数
+    var debounce = window.debounce = function (func, wait, immediate) {
+        var timeout, result;
+        return function () {
+            var context = this, args = arguments;
+            var later = function () {
+                timeout = null;
+                if (!immediate) result = func.apply(context, args);
+            };
+            var callNow = immediate && !timeout;
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if (callNow) result = func.apply(context, args);
+            return result;
+        };
+        
+        
+    };
+    //节流函数
+    var throttle = window.throttle = function (func, wait) {
+        var context, args, timeout, result;
+        var previous = 0;
+        var later = function () {
+            previous = new Date();
+            timeout = null;
+            result = func.apply(context, args);
+        };
+        return function () {
+            var now = new Date();
+            var remaining = wait - (now - previous);
+            context = this;
+            args = arguments;
+            if (remaining <= 0) {
+                clearTimeout(timeout);
+                timeout = null;
+                previous = now;
+                result = func.apply(context, args);
+            } else if (!timeout) {
+                timeout = setTimeout(later, remaining);
+            }
+            return result;
+        };
+    };
+    var openSubscribe = window.openSubscribe = function (isDealer) {
+		        //初始化值设置
+        openSubscribeMethod(isDealer);
+        var $container = $(".toolbox-container");
+        $(".toolbox-container .toolbox:eq(1)").addClass("active").siblings().removeClass("active");
+        $(".toolbox-btns li:eq(1)").addClass("active").siblings().removeClass("active");
+        $("html").addClass("toolbox-open");
+        $container.animate({
+            right: 0
+        }, 200, function () {
+            $container.addClass("active");
+        });
+        mask.open();
+        return false;
+    }
+    var dlg = window.dlg = {
+        alert: function (options) {
+            options = $.extend({
+                icon:"",
+                title: "",
+                content: "",
+                dlgClass: "",
+                btnText:"关闭"
+            }, options);
+            var html = templates.build(templates.dlg.alert, options);
+            var callback;
+            var $dlg = $(html).appendTo(document.body);
+            mask.open();
+            $dlg.snabbt({
+                fromOpacity: 0,
+                fromScale: [0.5, 0.5],
+                fromPosition: [-$dlg.width() / 2, -$dlg.height() / 2, 0],
+                opacity: 1,
+                scale: [1, 1],
+                position: [-$dlg.width() / 2, -$dlg.height() / 2, 0],
+                duration: 200,
+                complete: function () {
+                    callback && callback.call($dlg);
+                }
+            });
+            var closeDlg = function () {
+                if ($(document.body).find($dlg).length > 0) {
+                    $dlg.snabbt({
+                        fromPosition: [-$dlg.width() / 2, -$dlg.height() / 2, 0],
+                        opacity: 0,
+                        scale: [0.5, 0.5],
+                        position: [-$dlg.width() / 2, -$dlg.height() / 2, 0],
+                        duration: 200,
+                        complete: function () {
+                            $dlg.remove();
+                        }
+                    });
+                    closeDlg = null;
+                }
+            };
+            $(".close", $dlg).add($(".btn-close", $dlg)).smartClick(function () {
+                closeDlg && closeDlg();
+                mask.close();
+            });
+            mask.on("close", function () {
+                closeDlg && closeDlg();
+            }, true);
+            return {
+                then:function(_callback){
+                    callback = _callback;
+                }
+            }
+        }
+    }
+    window.deviceInfo = {
+        isMobile: function () {
+            return $(window).outerWidth() <= 812;
+        },
+        isPc: function () {
+            return $(window).outerWidth() > 812;
+        }
+    }
+    window.browserInfo = {
+        wx: function () {
+            return /MicroMessenger/ig.test(navigator.userAgent);
+        },
+        firefox:function(){
+            return !!document.getBoxObjectFor;
+        },
+        chrome:function(){
+            return window.MessageEvent && !document.getBoxObjectFor;
+        },
+        edge: function () {
+            return /edge/ig.test(navigator.userAgent);
+        },
+        safari:function(){
+            return /version\/([\w.]+).*(safari)/ig.test(navigator.userAgent) && !window.chrome;
+        },
+        ie: function () {
+            return utils.browserInfo.browser == "IE";
+        }
+    }
+    var hrefTap = function (e) {
+        var $this = $(this);
+        window.open($this.data("href"), $this.data("target") || "_self");
+    }
+    var mediaFn = function () {
+        if (deviceInfo.isPc()) {
+            $("[data-href]").each(function (i, item) {
+                var $item = $(item), href = $item.data("href");
+                if (!!href && href.indexOf("tel:") != 0) {
+                    $item.prop("href", $item.data("href"));
+                    $item.prop("target", $item.data("target") || "_self");
+                }
+                $item.hammer().off("tap", hrefTap);
+            });
+            $("[data-pc-src]").each(function (i, item) {
+                var $item = $(item), src = $item.data("pc-src");
+                item.src = src;
+            });
+            $("[data-pc-bg]").each(function (i, item) {
+                var $item = $(item), bg = $item.data("pc-bg");
+                $item.css({
+                    backgroundImage: "url("+bg+")"
+                });
+            });
+            ///注册PC端事件
+            //卸载移动端事件
+        } else if (deviceInfo.isMobile()) {
+            $("[data-href]").each(function (i, item) {
+                var $item = $(item), href = $item.data("href");
+                $item.removeProp("href");
+                $item.removeProp("target");
+                $item.hammer().on("tap", hrefTap);
+            });
+            $("[data-mobile-src]").each(function (i, item) {
+                var $item = $(item), src = $item.data("mobile-src");
+                item.src = src;
+            });
+            $("[data-mobile-bg]").each(function (i, item) {
+                var $item = $(item), bg = $item.data("mobile-bg");
+                $item.css({
+                    "background-image": "url(" + bg + ")"
+                });
+            });
+            //卸载PC端事件
+            //注册移动端事件
+        }
+    };
+    
+    //手机端分享 微博微信弹出二维码
+				$(".qr-title").click(function(e) {
+					e.stopPropagation();
+					$(this).siblings(".qr-block,.qr-angel").toggle();
+					$(this).parents(".wechat-block").siblings().find(".qr-block,.qr-angel").hide();
+				});
+				$(".shareToBlock").click(function(){
+					$(this).hide();
+				});
+    
+}(jQuery, window);

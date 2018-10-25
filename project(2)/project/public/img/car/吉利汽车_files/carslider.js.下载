@@ -1,0 +1,322 @@
+﻿/// <reference path="jquery/jquery.min.js" />
+/// <reference path="hammer.min.js" />
+(function ($, win) {
+    var carslider = win.carslider = function (container, cars) {
+        this._checkCarsCount(cars);
+        var self = this;
+        this.carGoal =
+        {
+            bookcar: {
+                "博瑞": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_01",
+                "博越": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_03",
+                "帝豪GL": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_05",
+                "帝豪GS": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_07",
+                "全新帝豪": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_09",
+                "帝豪EV450": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_11",
+                "帝豪PHEV": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_13",
+                "远景S1": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_15",
+                "远景X3": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_17",
+                "远景X1": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_19",
+                "全新远景": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_21",
+                "远景SUV": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_23",
+                "全新金刚": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_25"
+            },
+            knowmore: {
+                "博瑞": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_02",
+                "博越": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_04",
+                "帝豪GL": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_06",
+                "帝豪GS": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_08",
+                "全新帝豪": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_10",
+                "帝豪EV450": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_12",
+                "帝豪PHEV": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_14",
+                "远景S1": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_16",
+                "远景X3": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_18",
+                "远景X1": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_20",
+                "全新远景": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_22",
+                "远景SUV": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_24",
+                "全新金刚": "G_PORTAL_HOME_FIRSTSCREEN_SERIES_26"
+            }
+
+        };
+
+        this.index = 0;
+        this.speed = 900;
+        this.outOpacity = 0.3;
+        this.cars = cars;
+        this.animating = false;
+        this.$container = $(container);
+        var mc = new Hammer(this.$container.find(".carlist").get(0));
+        mc.get("pan").set({ threshold: 30 });
+        mc.on("panleft", function (e) {
+            if (Math.abs(e.angle) > 170) {
+                self.moving(1);
+            }
+        });
+        mc.on("panright", function (e) {
+            if (Math.abs(e.angle) < 10) {
+                self.moving(-1);
+            }
+        });
+        $(".caption", this.$container).on("touchstart", function () {
+            self._showCaption();
+        });
+        $(".caption .konw-left", this.$container).hammer().on("tap", function () {
+            var goalName = $(this).attr("data-goal");
+			$common_series_code_other = $(this).attr("car-series");
+            self._triggerGoal(goalName, function () { openSubscribe(); });
+        });
+        $(".caption .konw-right", this.$container).hammer().on("tap", function () {
+            var goalName = $(this).attr("data-goal");
+            self._triggerGoal(goalName);
+            window.open(self.cars[self.index].url, "_blank");
+        });
+        mc.on("tap", function () {
+            self._showCaption();
+        });
+        this._init();
+    }
+    carslider.prototype = {
+        _checkCarsCount: function (cars) {
+            var i = 0;
+            //while (cars.length < 3) {
+            //    cars.push(cars[i]);
+            //    i++;
+            //    if (i > cars.length - 1) {
+            //        i = 0;
+            //    }
+            //}
+        },
+        _init: function () {
+            var self = this;
+            var $carlist = self.$container.find(".carlist");
+            self._buildCar(self.cars[self.cars.length - 1]).appendTo($carlist);
+            self._buildCar(self.cars[0]).css({
+                opacity: 1
+            }).appendTo($carlist);
+            self._buildCar(self.cars[1]).appendTo($carlist);
+            var flag = document.createDocumentFragment();
+            for (var i = 0, len = self.cars.length; i < len; i++) {
+                var car = self.cars[i];
+                var $li = $('<li>' + car.name + '<li>');
+                if (i == self.index) {
+                    $li.addClass("active");
+                }
+                flag.appendChild($li.get(0));
+            }
+            $(".car-info .title", self.$container).html(self.cars[0].title);
+            $(".car-info .sub-title", self.$container).html(self.cars[0].subTitle);
+            $(".carmenu", self.$container).append(flag);
+            $(".carmenu>li", self.$container).each(function (i, item) {
+                !function (index, li) {
+                    var menuLi = new Hammer(item);
+                    menuLi.on("tap", function () {
+                        self.gotoIndex(i);
+                    });
+                }.call(item, i, item);
+            });
+        },
+        _buildCar: function (car) {
+            var self = this;
+            return $('<li style="opacity:' + self.outOpacity + '"><div class="car"><img src="' + car.img + '" />'
+                + '<div class="car-wheel front" style="left:' + car.fontWheelLeft + ';bottom:' + car.frontWheelBottom + ';width:' + car.wheelSize + ';height:' + car.wheelSize + '"></div>'
+                + '<div class="car-wheel back" style="right:' + car.backWheelRight + ';bottom:' + car.backWheelBottom + ';width:' + car.wheelSize + ';height:' + car.wheelSize + '"></div></div></li>');
+        },
+        _triggerGoal: function (goalName, fun) {
+            window.api.Goal.Trigger(goalName,fun);
+        },
+        _showCaption: function () {
+            var self = this;
+            self.$container.toggleClass("show-caption");
+            var car = self.cars[self.index].name;
+            $(".caption .konw-left", self.$container).attr("car-series", car).attr("data-goal", self.carGoal.bookcar[car]);
+            $(".caption .konw-right", self.$container).attr("data-goal", self.carGoal.knowmore[car]);
+        },
+        moving: function (direction, callback) {
+            var self = this;
+            var width = $(window).outerWidth();
+            if (!self.animating) {
+                self.animating = true;
+                var appendIndex;
+                if (direction == 1) {
+                    appendIndex = self.index + 2;
+                    if (appendIndex > self.cars.length - 1) {
+                        appendIndex = appendIndex - self.cars.length;
+                    }
+                } else if (direction == -1) {
+                    appendIndex = self.index - 2;
+                    if (appendIndex < 0) {
+                        appendIndex = self.cars.length + appendIndex;
+                    }
+                }
+                var index = self.index + direction;
+                if (index < 0) {
+                    index = self.cars.length - 1;
+                }
+                if (index > self.cars.length - 1) {
+                    index = 0;
+                }
+                self.index = index;
+                var $carlist = self.$container.find(".carlist");
+                var $cars = self.$container.find(".carlist li");
+                $(".carmenu li", self.$container).removeClass("active").eq(self.index).addClass("active");
+                $(".car-info", self.$container).addClass("out");
+                var thisCar = self.cars[self.index];
+                setTimeout(function () {
+                    $(".car-info .title", self.$container).html(thisCar.title);
+                    $(".car-info .sub-title", self.$container).html(thisCar.subTitle);
+                    $(".car-info", self.$container).removeClass("out");
+                }, self.speed / 2);
+                var car = self.cars[appendIndex];
+                if (direction == 1) {
+                    var $cCar = $cars.last();
+                    var $car = this._buildCar(car).insertAfter($cCar);
+                    self.$container.addClass("front");
+                    $cars.eq(1).animate({
+                        opacity: self.outOpacity
+                    }, self.speed);
+                    $cars.eq(2).animate({
+                        opacity: 1
+                    }, self.speed);
+                    $carlist.animate({
+                        left: -width + 30
+                    }, self.speed, function () {
+                        $carlist.css({
+                            left: "calc(0px - (100vw - 30px)*2/5)"
+                        });
+                        $cars.eq(0).remove();
+                        self.$container.removeClass("front");
+                        self.animating = false;
+                        callback && callback();
+                    });
+                } else if (direction == -1) {
+                    var $cCar = $cars.first();
+                    var $car = this._buildCar(car).insertBefore($cCar);
+                    self.$container.addClass("back");
+                    $cars.eq(0).animate({
+                        opacity: 1
+                    }, self.speed);
+                    $cars.eq(1).animate({
+                        opacity: self.outOpacity
+                    }, self.speed);
+                    var left = -(width - 30) * 2 / 5;
+                    $carlist.css({
+                        left: -width + 30
+                    }).animate({
+                        left: left
+                    }, self.speed, function () {
+                        $cars.last().remove();
+                        self.$container.removeClass("back");
+                        self.animating = false;
+                        callback && callback();
+                    });
+                }
+            }
+        },
+        gotoIndex: function (index) {
+            var self = this;
+            var width = self.$container.width();
+            var carCount = self.cars.length;
+            var carWidth = width * 3 / 5;
+            var $carlist = self.$container.find(".carlist");
+            var $cars = self.$container.find(".carlist li");
+            var thisCar = self.cars[index];
+            if (!self.animating) {
+                if (index < self.index) {
+                    self.animating = true;
+                    $cars.eq(1).css({
+                        opacity: self.outOpacity
+                    });
+                    var $cCar = $cars.first();
+                    $(".car-info", self.$container).addClass("out");
+                    self.$container.addClass("back");
+                    var appendCount = self.index - index;
+                    var appendIndex = self.index - 2, carHtml;
+                    if (appendIndex < 0) {
+                        appendIndex = carCount - 1;
+                    }
+                    var temp = appendCount;
+                    while (temp > 0) {
+                        $cCar = self._buildCar(self.cars[appendIndex]).insertBefore($cCar);
+                        temp--;
+                        appendIndex--;
+                        if (appendIndex < 0) {
+                            appendIndex = carCount - 1;
+                        }
+                    }
+                    var left = -carWidth * appendCount;
+                    self.index = index;
+                    $(".carmenu li", self.$container).removeClass("active").eq(index).addClass("active");
+                    $carlist.css({
+                        left: left - carWidth * 3 / 5 - 8
+                    });
+                    var speed = self.speed * appendCount / 2;
+                    if (speed < self.speed) {
+                        speed = self.speed;
+                    }
+                    $carlist.animate({
+                        left: -carWidth + carWidth / 3
+                    }, speed, function () {
+                        $cars = self.$container.find(".carlist li");
+                        $cars.not($cars.eq(0).add($cars.eq(1)).add($cars.eq(2))).remove();
+                        self.$container.find(".carlist li").eq(1).css({
+                            opacity: 1
+                        });
+                        $(".car-info .title", self.$container).html(thisCar.title);
+                        $(".car-info .sub-title", self.$container).html(thisCar.subTitle);
+                        $(".car-info", self.$container).removeClass("out");
+                        self.$container.removeClass("back");
+                        self.animating = false;
+                    });
+                } else if (index > self.index) {
+                    self.animating = true;
+                    var $cCar = $cars.last();
+                    $cars.eq(1).css({
+                        opacity: self.outOpacity
+                    });
+                    $(".car-info", self.$container).addClass("out");
+                    self.$container.addClass("front");
+                    var appendCount = index - self.index;
+                    var appendIndex = self.index + 2, carHtml;
+                    if (appendIndex > carCount - 1) {
+                        appendIndex = 0;
+                    }
+                    var temp = appendCount;
+                    while (temp > 0) {
+                        $cCar = self._buildCar(self.cars[appendIndex]).insertAfter($cCar);
+                        temp--;
+                        appendIndex++;
+                        if (appendIndex > carCount - 1) {
+                            appendIndex = 0;
+                        }
+                    }
+                    var left = -carWidth * appendCount - carWidth * 3 / 5;
+                    self.index = index;
+                    $(".carmenu li", self.$container).removeClass("active").eq(index).addClass("active");
+                    var speed = self.speed * appendCount / 2;
+                    if (speed < self.speed) {
+                        speed = self.speed;
+                    }
+                    $carlist.animate({
+                        left: left
+                    }, speed, function () {
+                        $cars = self.$container.find(".carlist li");
+                        var carLength = $cars.length
+                        $cars.not($cars.eq(carLength - 1).add($cars.eq(carLength - 2)).add($cars.eq(carLength - 3))).remove();
+                        $carlist.css({
+                            left: -carWidth * 3 / 5 - 12
+                        });
+                        self.$container.find(".carlist li").eq(1).css({
+                            opacity: 1
+                        });
+                        $(".car-info .title", self.$container).html(thisCar.title);
+                        $(".car-info .sub-title", self.$container).html(thisCar.subTitle);
+                        $(".car-info", self.$container).removeClass("out");
+                        self.$container.removeClass("front");
+                        self.animating = false;
+                    });
+                }
+
+            }
+        }
+    };
+})(jQuery, window);

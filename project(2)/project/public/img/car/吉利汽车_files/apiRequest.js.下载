@@ -1,0 +1,12 @@
+﻿window.apibase = "/api/geely";
+window.api = {
+    Goal: {
+        Trigger: function (goalName, func) {
+            if (goalName == undefined) { func && func(); return;}
+            $.get(apibase + "/goal", { "goalName": goalName }, function (result) {
+                if (result != "True") console.log("goal result:" + goalName + " " + result);
+                func && func(result);
+            }, "text")
+        }
+    }
+}

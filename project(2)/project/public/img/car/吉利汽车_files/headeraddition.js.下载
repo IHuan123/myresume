@@ -1,0 +1,47 @@
+﻿function HeaderEventInit() {
+    $("#search-min-price").on("change", function (e) {
+        var minvalue = $(this).attr("min");
+        var maxvalue = $(this).attr("max");
+        var minprice = $("#search-min-price").val();
+        var maxprice = $("#search-max-price").val();
+        var currval = $(this).val();
+        if (currval <= parseInt(minvalue)) {
+            $(this).val(minvalue);
+        }
+        if (currval >= parseInt(maxvalue)) {
+            $(this).val(maxvalue);
+        }
+        if (currval >= parseInt(maxprice)) {
+            $(this).val(maxprice);
+        }
+        $("#search-price-slider").slider('setValue', [parseInt($("#search-min-price").val()), parseInt($("#search-max-price").val())]);
+        HomeSearchCar($("#search-min-price").val(), $("#search-max-price").val());
+    });
+    $("#search-max-price").on("change", function (e) {
+        var minvalue = $(this).attr("min");
+        var maxvalue = $(this).attr("max");
+        var minprice = $("#search-min-price").val();
+        var maxprice = $("#search-max-price").val();
+        var currval = $(this).val();
+        if (currval <= parseInt(minvalue)) {
+            $(this).val(minvalue);
+        }
+        if (currval >= parseInt(maxvalue)) {
+            $(this).val(maxvalue);
+        }
+        if (currval <= parseInt(minprice)) {
+            $(this).val(minprice);
+        }
+        $("#search-price-slider").slider('setValue', [parseInt($("#search-min-price").val()), parseInt($("#search-max-price").val())]);
+        HomeSearchCar($("#search-min-price").val(), $("#search-max-price").val());
+    });
+    var searchSlider = $("#search-price-slider").slider({
+        range: true
+    });
+    $("#search-price-slider").on("change", function (e) {
+        $("#search-min-price").val(e.value.newValue[0]);
+        $("#search-max-price").val(e.value.newValue[1]);
+        HomeSearchCar(e.value.newValue[0], e.value.newValue[1]);
+    });
+}
+HeaderEventInit();

@@ -1,0 +1,100 @@
+﻿!function ($,win) {
+    var adSlider = window.adSlider = function (selector, options) {
+        var self = this;
+        options = options || {};
+        self.index = 0;
+        self.selector = selector;
+        self.timeout = null;
+        self.delay = options.delay || 6000;
+        self.speed = options.speed || 1000;
+        self.manualSlide = false;
+        self.stoped = false;
+        $(win).on("resize", debounce(function () {
+            self.stop();
+            $(self.selector + " .slide:animated").stop();
+            self.setIndex(self.index);
+        }, 100));
+    }
+    adSlider.prototype = {
+        start: function () {
+            var self = this;
+            self.timeout = setTimeout(function () {
+                self._slideTo(self.index + 1);
+            }, self.delay);
+            self.stoped = false;
+        },
+        stop: function () {
+            this.stoped = true;
+            this.clear();
+        },
+        clear:function(){
+            if (!!this.timeout) {
+                win.clearTimeout(this.timeout);
+                this.timeout = null;
+            }
+        },
+        slideNext: function () {
+            this.clear();
+            this.manualSlide = true;
+            this._slideTo(this.index + 1);
+        },
+        slidePrev: function () {
+            this.clear();
+            this.manualSlide = true;
+            this._slideTo(this.index - 1);
+        },
+        _slideTo: function (index,callback) {
+            var self = this, $slides = $(self.selector + " .slide");
+            if (!self.stoped || self.manualSlide) {
+                self.manualSlide = false;
+                var count = $slides.length, width = $(window).width();
+                var direction = index > self.index ? 1 : -1;
+                if (index < 0) {
+                    index = count - 1;
+                }
+                if (index > count - 1) {
+                    index = 0;
+                }
+                if (!$slides.is(":animated")) {
+                    if (!!self.timeout) {
+                        clearTimeout(self.timeout);
+                    }
+                    $slides.css({
+                        zIndex: 1
+                    });
+                    $slides.eq(index).css({
+                        left: width * direction,
+                        zIndex: 2
+                    }).show().animate({
+                        left: 0
+                    }, self.speed, function () {
+                        $slides.eq(self.index).css({
+                            display: "none"
+                        });
+                        self.index = index;
+                        callback && callback();
+                        if (!self.stoped) {
+                            //self.start();
+                        }
+                    });
+                }
+            }
+        },
+        setIndex: function (index) {
+            var self = this, $slides = $(self.selector + " .slide");
+            var count = $slides.length, width = $(window).width();
+            self.clear();
+            if (index < 0 || index > count - 1) {
+                return;
+            }
+            $slides.css({
+                zIndex: 1
+            });
+            $slides.eq(index).css({
+                left: 0,
+                zIndex: 2
+            });
+            self.start();
+        }
+    }
+}(jQuery,window)

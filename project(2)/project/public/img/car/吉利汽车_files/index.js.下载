@@ -1,0 +1,364 @@
+﻿!function ($, win) {
+    var $adSwiper, adSwiper;
+
+    var pcEventBinded = false, mobileEventBinded = false, pageIndex = 0;
+    var myAdSlider, indexSwiper;
+
+    var carSliderTemplate = '<div class="carslider" id="dihao-slider">\
+                        <div class="carslider-box">\
+                            <div class="car-info">\
+                                <p class="title"></p>\
+                                <p class="sub-title"></p>\
+                            </div>\
+                            <ul class="carlist"></ul>\
+                        </div>\
+                        <ul class="carmenu"></ul>\
+                        <div class="caption">\
+                            <div class="konw-left">\
+                                <i class="glfico-aclock"></i>\
+                                <a>预约试驾</a>\
+                            </div>\
+                            <div class="konw-right">\
+                                <i class="glfico-book"></i>\
+                                <a>了解车型</a>\
+                            </div>\
+                        </div>\
+                    </div>';
+    var index = {
+        pc: {
+            checkNewsBlocksBg: function () {
+                $(".news-block .img").each(function (i, item) {
+                    var $item = $(item);
+                    var pcBg = $item.data("pc-bg");
+                    if (pcBg) {
+                        $item.css({
+                            backgroundImage: 'url(' + pcBg + ')'
+                        });
+                    }
+                });
+            },
+            indexSwiper: {
+                build: function () {
+                    indexSwiper = window.indexSwiper = new adSlider(".adslider", {
+                        delay: 6000
+                    });
+                },
+                destroy: function () {
+                    if (!!indexSwiper) {
+                        indexSwiper.stop();
+                    }
+                }
+            },
+            fullPage: function (e, delta) {
+                if (!pageRunning) {
+                    pageRunning = true;
+                    var height = $(window).outerHeight();
+                    //indexSwiper.stop();
+                    var thisPage = pageIndex;
+                    if (delta < 0) {
+                        pageIndex += 1;
+                    } else if (delta > 0) {
+                        pageIndex -= 1;
+                    }
+                    if (pageIndex >= 0 && pageIndex <= 3) {
+                        var doc = utils.getDoc();
+                        $(doc).animate({
+                            scrollTop: height * pageIndex
+                        }, 400, function () {
+                            pageRunning = false;
+                        });
+                    } else {
+                        pageIndex = thisPage;
+                        pageRunning = false;
+                    }
+                    if (pageIndex > 0) {
+                        $("header").addClass("fixedtop");
+                        $(".toolbox-container").addClass("fixedtop");
+                    } else {
+                        $("header").removeClass("fixedtop");
+                        $(".toolbox-container").removeClass("fixedtop");
+                    }
+                    //if (pageIndex == 1) {
+                    //    //indexSwiper.start();
+                    //} else {
+                    //    //indexSwiper.stop();
+                    //}
+                    if (pageIndex == 3) {
+                        console.log(1);
+                        $(".section-next").fadeOut(200);
+                    } else {
+                        $(".section-next").show();
+                    }
+                }
+            },
+            qrcode: {
+                mouseEnter: function () {
+                    $(this).addClass("active");
+                },
+                mouseleave: function () {
+                    $(this).removeClass("active");
+                }
+            },
+            doc: {
+                mouseEnter: function (e) {
+                    //!!indexSwiper && indexSwiper.stop();
+                },
+                mouseLeave: function (e) {
+                    //!!indexSwiper && indexSwiper.start();
+                }
+            }
+        },
+        mobile: {
+            checkNewsBlocksBg: function () {
+                $(".news-block .img").each(function (i, item) {
+                    var $item = $(item);
+                    var mobleBg = $item.data("mobile-bg");
+                    if (mobleBg) {
+                        $item.css({
+                            backgroundImage: 'url(' + mobleBg + ')'
+                        });
+                    }
+                });
+            },
+            qrcode: {
+                tap: function () {
+                    $(this).toggleClass("active");
+                }
+            },
+            buildAdSlider: function () {
+                if ($adSwiper == null) {
+                    $adSwiper = $('<div class="swiper-container swiper-ad" id="swiper-ad">\
+                            <div class="swiper-wrapper">\
+                            </div>\
+                            <div class="swiper-pagination"></div>\
+                        </div>');
+                    var $pcSlides = $(".adslider .slide:not(.main-slide)").each(function (i, item) {
+                        var $item = $(item);
+                        console.log($item.css("background-image"));
+                        $('<div class="swiper-slide"><a href="' + ($item.prop('href') || "#") + '" target="' + ($item.prop('target') || "_blank") + '" style="background-image:' + $item.css("background-image").replace(/"/g, "") + '"></a></div>').appendTo($(".swiper-wrapper", $adSwiper));
+                    });
+                    $adSwiper.appendTo(".section.first");
+                    adSwiper = new Swiper("#swiper-ad", {
+                        pagination: "#swiper-ad .swiper-pagination",
+                        //pagination: {
+                        //    el: '.swiper-pagination',
+                        //},
+                        paginationBulletRender: function (a, b, c) {
+                            return '<li class="' + c + '"><span><i></i></span></li>'
+                        },
+                        loop: true
+                    });
+                }
+            }
+        }
+    };
+    $(function () {
+        //myAdSlider = new adSlider(".adslider");
+        //var newsTitle = $(".headline-news>a").html();
+        //var newsTitle = newsTitle.replace(/\d+/g, function (num) {
+        //    return '<span>'+num+'</span>';
+        //});
+        //$(".headline-news>a").html(newsTitle);
+        buildCarSlider();
+        $(".slide-left").on("click", function () {
+            indexSwiper.slidePrev();
+        });
+        $(".slide-right").on("click", function () {
+            indexSwiper.slideNext();
+        });
+        $(window).on("resize", mediaFn);
+        $(document).on("touchstart", function (e) {
+            var $lis = $(".car-model-list>li.knowmore-open");
+            var $km = $(".carslider.show-caption");
+       
+            if ($lis.find(e.target).length == 0 && !$lis.is(e.target)) {
+                $lis.removeClass("knowmore-open");
+            }
+            if ($km.find(e.target).length == 0 && !$km.is(e.target)) {
+                $km.removeClass("show-caption");
+            }
+        });
+        $(document).on("click", function (e) {
+            var $qrcode = $(".l-qrcode");
+            if ($qrcode.hasClass("active") && !$qrcode.is(e.target) && $qrcode.find(e.target).length == 0) {
+                $qrcode.removeClass("active");
+            }
+        });
+        var actSwiper = new Swiper('#swiper-activity', {
+            //pagination: {
+            //    el: '.swiper-pagination',
+            //},
+            pagination: "#swiper-activity .swiper-pagination",
+            loop: true
+        });
+        //var topSwiper = new Swiper("#topSwiper", { pagination: '#topSwiper .swiper-pagination', })
+        var topSwiper = new Swiper("#topSwiper", { pagination: '#topSwiper .swiper-pagination', autoplay: 5000, speed: 300, })
+        //$(".car-model-list .car-list li a").on("touchstart", function (e) {
+        //    e.preventDefault();
+        //});
+        //if (document.documentElement.scrollTop > $(window).height()) {
+        //    $("header").addClass("fixedtop");
+        //    $(".toolbox-container").addClass("fixedtop");
+        //}
+        setTimeout(mediaFn, 100);
+        // 市场活动文字字数控制
+        function ellipsis(num) {
+            $(".mt-text").each(function aa() {
+                var maxwidth = num;
+                if ($(this).text().length > maxwidth) {
+                    $(this).text($(this).text().substring(0, maxwidth));
+                    $(this).html($(this).html() + '…');
+                }
+            });
+        };
+        ellipsis(100);
+
+    });
+    var mediaFn = function () {
+        pageIndex = 0;
+        document.documentElement.scrollTop = 0;
+        if ($(window).outerWidth() <= 768) {
+            $("header").removeClass("fixedtop");
+            if (pcEventBinded) {
+                pcEventBinded = false;
+                //卸载PC端事件
+                $(document.body).unmousewheel(index.pc.fullPage);
+                $(document).off("mouseenter", ".car-model-list>li", modelLiMouseEnter);
+                $(document).off("mouseleave", ".car-model-list>li", modelLiMouseLeave);
+                $(document).off("mouseenter", index.pc.doc.mouseEnter);
+                $(document).off("mouseleave", index.pc.doc.mouseLeave);
+                $(".l-qrcode").off("mouseenter", index.pc.qrcode.mouseEnter);
+                $(".l-qrcode").off("mouseleave", index.pc.qrcode.mouseleave);
+            }
+            if (!mobileEventBinded) {
+                mobileEventBinded = true;
+                //注册移动端事件
+                $(".car-model-list .car-list li").hammer().on("tap", touchMobelLi);
+                $(".l-qrcode").hammer().on("tap", index.mobile.qrcode.tap);
+            }
+            //index.pc.indexSwiper.destroy();
+            showCarSlider();
+            changeCarModelMobileImg();
+            index.mobile.checkNewsBlocksBg();
+            index.mobile.buildAdSlider();
+            //if (!!indexSwiper) {
+            //    indexSwiper.setIndex(0);
+            //    indexSwiper && indexSwiper.stop();
+            //}
+        } else {
+            if (!pcEventBinded) {
+                pcEventBinded = true;
+                //注册PC端事件
+                //$(document.body).mousewheel(index.pc.fullPage);
+                //$(".section-next").on("click", function () {
+                //    index.pc.fullPage(null, -1);
+                //});
+                $(document).on("mouseenter", ".car-model-list>li", modelLiMouseEnter);
+                $(document).on("mouseleave", ".car-model-list>li", modelLiMouseLeave);
+                $(document).on("mouseenter", index.pc.doc.mouseEnter);
+                $(document).on("mouseleave", index.pc.doc.mouseLeave);
+                $(".l-qrcode").on("mouseenter", index.pc.qrcode.mouseEnter);
+                $(".l-qrcode").on("mouseleave", index.pc.qrcode.mouseleave);
+            }
+            if (mobileEventBinded) {
+                mobileEventBinded = false;
+                //卸载移动端事件
+                $(".car-model-list .car-list li").hammer().off("tap", touchMobelLi);
+                $(".l-qrcode").hammer().off("tap", index.mobile.qrcode.tap);
+            }
+            hideCarSlider();
+            changeCarModelPcImg();
+            index.pc.checkNewsBlocksBg();
+            if (indexSwiper == null) {
+                index.pc.indexSwiper.build();
+            }
+            //indexSwiper && indexSwiper.start();
+        }
+    }
+    var pageRunning = false;
+    var buildCarSlider = function () {
+        $(".car-list").each(function (i, item) {
+            var $item = $(item), $li = $("li:not(.empty)", item);
+            if ($li.length > 1) {
+                $item.hide();
+                var $carSliderEle = $(carSliderTemplate).insertAfter(item);
+                var carArray = [];
+                $li.each(function (i, carLi) {
+                    var $carLi = $(carLi);
+                    carArray.push({
+                        img: $("img", carLi).attr("src"),
+                        name: $("p", carLi).html(),
+                        title: $carLi.data("title"),
+                        subTitle: $carLi.data("sub-title"),
+                        wheelSize: $carLi.data("wheel-size"),
+                        fontWheelLeft: $carLi.data("front-wheel-left"),
+                        frontWheelBottom: $carLi.data("front-wheel-bottom"),
+                        backWheelRight: $carLi.data("back-wheel-right"),
+                        backWheelBottom: $carLi.data("back-wheel-bottom"),
+                        url: $carLi.data("url")
+                    });
+                });
+                var slider = new carslider($carSliderEle.get(0), carArray);
+            }
+        });
+    };
+    var hideCarSlider = function () {
+        $(".car-list").each(function (i, item) {
+            var $item = $(item), $li = $("li:not(.empty)", item);
+            if ($li.length > 1) {
+                $item.parent().removeClass("car-slider-wrapper");
+                $item.css({
+                    display: "flex"
+                });
+                $item.prev("p").show();
+                $item.prev("p").prev("img").show();
+                $item.next(".carslider").hide();
+            }
+        });
+    };
+    var showCarSlider = function () {
+        $(".car-list").each(function (i, item) {
+            var $item = $(item), $li = $("li:not(.empty)", item);
+            if ($li.length > 1) {
+                $item.parent().addClass("car-slider-wrapper");
+                $item.hide();
+                $item.prev("p").hide();
+                $item.prev("p").prev("img").hide();
+                $item.next(".carslider").show();
+            }
+        });
+    }
+    var changeCarModelMobileImg = function () {
+        $(".car-model-list>li>img").each(function (i, item) {
+            var $item = $(item);
+            var src = $item.src;
+            item.src = $item.data("mobile-img");
+            $item.data("pc-img", src);
+        });
+    }
+    var changeCarModelPcImg = function () {
+        $(".car-model-list>li>img").each(function (i, item) {
+            var $item = $(item), pcImg = $item.data("pc-img");
+            if (pcImg) {
+                var src = $item.src;
+                item.src = pcImg;
+                $item.data("mobile-img", src);
+            }
+        });
+    }
+    var touchMobelLi = function () {
+        var $this = $(this), $p = $this.parent().parent();
+        if (!$p.hasClass("car-slider-wrapper")) {
+            $p.toggleClass("knowmore-open");
+        }
+    }
+    var modelLiMouseEnter = function () {
+        var index = $(this).index();
+        $(".bg-list li").removeClass("active").eq(index).addClass("active");
+    }
+
+    var modelLiMouseLeave = function () {
+        var index = $(this).index();
+        $(".bg-list li.active").removeClass("active");
+    }
+}(jQuery, window);

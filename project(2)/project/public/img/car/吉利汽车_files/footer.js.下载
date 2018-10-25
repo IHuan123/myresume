@@ -1,0 +1,97 @@
+﻿!function ($, win) {
+    var scrollTop = 0;
+    var footer = {
+        pc: {
+            eventListened: false
+        },
+        mobile: {
+            eventListened: false,
+            friendLinksTap: function (e) {               
+                var $this = $(this);
+                scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+                $this.addClass("active").siblings(".active").removeClass("active");
+                $("html").addClass("friendlinks-open");
+                document.documentElement.scrollTop = document.body.scrollTop = scrollTop;
+                mask.open();           
+            }
+        }
+    }
+    var mediaFn = function() {
+        if (deviceInfo.isPc()) {
+            $("#footer").insertAfter(".news-blocks-wrapper");
+            if ($("html").hasClass("friendlinks-open")) {
+                $("html").removeClass("friendlinks-open");
+            }
+            $(".friendlinks.active").removeClass("active");
+            //卸载移动端事件
+            $(".friendlinks").hammer().off("tap", footer.mobile.friendLinksTap);
+        } else {
+            $("#footer").appendTo(document.body);
+            $(".friendlinks").unbind("tap");
+            //注册移动端事件
+            $(".friendlinks").hammer().on("tap", footer.mobile.friendLinksTap);
+        }
+    }
+    $(function () {
+        var wxShareBoxAnimating = false;
+        $(".quick-links a:eq(1)").on("click", function () {
+            if (!wxShareBoxAnimating) {
+                wxShareBoxAnimating = true;
+                $("#wx_share_footer").show().addClass("active");
+                mask.open();
+                setTimeout(function () {
+                    wxShareBoxAnimating = false;
+                }, 301);
+            }
+        });
+        $("#wx_share_footer .close").on("click", function () {
+            if (!wxShareBoxAnimating) {
+                wxShareBoxAnimating = true;
+                $("#wx_share_footer").removeClass("active");
+                setTimeout(function () {
+                    $("#wx_share_footer").hide();
+                    wxShareBoxAnimating = false;
+                    mask.close();
+                }, 301);
+            }
+        });
+        $(document).on("click", function (e) {
+            var $wxSharingBox = $("#wx_share_footer");
+            if ($wxSharingBox.hasClass("active") && !$wxSharingBox.is(e.target) && $wxSharingBox.find(e.target).length == 0) {
+                if (!wxShareBoxAnimating) {
+                    wxShareBoxAnimating = true;
+                    $wxSharingBox.removeClass("active");
+                    setTimeout(function () {
+                        $wxSharingBox.hide();
+                        wxShareBoxAnimating = false;
+                        mask.close();
+                    }, 400);
+                }
+            }
+        });
+        mask.on("close", function () {
+            var $active = $(".friendlinks.active");
+            if ($active.length > 0) {
+                $active.removeClass("active");
+                $("html").removeClass("friendlinks-open");
+                //window.scrollTo(0, scrollTop);
+                document.documentElement.scrollTop = document.body.scrollTop = scrollTop;
+                mask.close();
+               
+            }
+        });
+        $(".friendlinks ul>li>a").on("click",function(){
+            //var $active = $(".friendlinks.active");
+            var $friendLinks = $(this).parents(".friendlinks");
+            if ($friendLinks.length > 0) {
+                $friendLinks.removeClass("active");
+                $("html").removeClass("friendlinks-open");
+                document.documentElement.scrollTop = document.body.scrollTop = scrollTop;
+                mask.close();
+            }
+            
+        });
+        window.addEventListener("resize", debounce(mediaFn, 10), false);
+        mediaFn();
+    });
+}(jQuery,window);

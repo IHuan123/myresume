@@ -1,0 +1,317 @@
+﻿! function($, win) {
+	var pcEventSigned = false,
+		mobileEventSigned = false;
+	var header = {
+		pc: {},
+		mobile: {
+			//setupLinkTap: function () {
+			//    $("a[href]").hammer().on("tap", function (e) {
+			//        e.preventDefault();
+			//        window.open(this.href, this.target);
+			//        return false;
+			//    });
+			//}
+		}
+	};
+	var carEvents = {
+		tap: function(e) {
+			$(this).toggleClass("active");
+		},
+		mouseenter: function(e) {
+			$(this).addClass("active");
+		},
+		mouseleave: function(e) {
+			$(this).removeClass("active");
+		}
+	};
+	var mobileToolsEvents = {
+		panUp: function(e) {
+			$(".mobile-tools").addClass("active");
+		},
+		panDown: function(e) {
+			$(".mobile-tools").removeClass("active");
+		}
+	};
+	var docClick = function(e) {
+		var $menu = $(".glmenu"),
+			$active = $(".glmenu>li.active"),
+			$search = $(".search-box.active"),
+			$searchBtn = $search.next("i"),
+			$mask = $(".mask"),
+			$mTools = $(".mobile-tools");
+		var $menuToggle = $(".menu-toggle");
+		//点击页面空白关闭菜单
+		if($("html").hasClass("glmenu-open") && !$menuToggle.is(e.target) && $menuToggle.find(e.target).length == 0 && !$menu.is(e.target) && $menu.find(e.target).length == 0 &&
+			!$mTools.is(e.target) && $mTools.find(e.target).length == 0) {
+			//关闭菜单
+			$active.removeClass("active");
+			//关闭菜单内容
+			$(".glmenu-content", $active).hide();
+			//品牌天地菜单收起并关闭
+			$(".glmenu-content-body .active", $active).children("ul").hide();
+			$(".glmenu-content-body .active", $active).removeClass("active");
+			$("html").removeClass("glmenu-open");
+			//关闭个人中心工具箱
+			$(".mobile-tools").removeClass("active out");
+			if(deviceInfo.isPc()) {
+				!!win.indexSwiper && win.indexSwiper.start();
+			}
+			mask.close();
+		}
+		//点击页面空白关闭搜索
+		if($search.length > 0 && !$searchBtn.is(e.target) && !$search.is(e.target) && $search.find(e.target).length == 0) {
+			$search.removeClass("active");
+		}
+	};
+	$(function() {
+		var wW = $(window).width();
+		$(".glmenu>li>a").on("click", function(e) {
+			var $this = $(this),
+				$li = $this.parent(),
+				$active = $(".glmenu>li.active");
+			if($this.is("[href]")) {
+				return;
+			} else {
+				if($li.get(0) != $active.get(0)) {
+					// $(".glmenu>li.active .glmenu-content").fadeOut(200);
+					if(wW >= 812) {
+						if($(".toolbox.active").length){
+							$(".mask").click();
+						};
+						$(".glmenu>li.active .glmenu-content").animate({
+							height: 'toggle',
+						}, 250, function() {
+							$(".glmenu>li.active").removeClass("active");
+							$this.parent().addClass("active");
+							$this.siblings(".glmenu-content").animate({
+								height: 'toggle',
+							}, 250);
+						});
+					} else {
+						$(".glmenu>li.active .glmenu-content").fadeOut(200);
+					}
+
+					$("html").addClass("glmenu-open");
+					$(".mobile-tools").addClass("out");
+					if(deviceInfo.isPc()) {
+						!!win.indexSwiper && win.indexSwiper.stop();
+					};
+					if(!$active.length) {
+						$this.parent().addClass("active");
+						// $(this).siblings(".glmenu-content").fadeIn(1000);
+						if(wW >= 812) {
+							$(this).siblings(".glmenu-content").animate({
+								height: 'toggle',
+							}, 250);
+						} else {
+							$(this).siblings(".glmenu-content").fadeIn(200);
+						}
+
+					}
+					mask.open();
+				} else {
+					$li.removeClass("active");
+					// $(".glmenu-content", $li).fadeOut(200);
+					if(wW >= 812) {
+						$(".glmenu-content", $li).animate({
+							height: "toggle",
+						}, 250);
+					} else {
+						$(".glmenu-content", $li).fadeOut(200);
+					}
+
+					$("html").removeClass("glmenu-open");
+					$(".mobile-tools").removeClass("out");
+					if(deviceInfo.isPc()) {
+						!!win.indexSwiper && win.indexSwiper.start();
+					}
+					mask.close();
+				}
+			}
+		});
+		$(".glmenu>li>.glmenu-content .close").on("click", function(e) {
+			// $(".glmenu>li.active .glmenu-content").fadeOut(200);
+			if($(".mask").is(':visible')){
+				$(".mask").click();
+			};
+			if(wW >= 812) {
+				$(".glmenu>li.active .glmenu-content").animate({
+					height: "toggle"
+				});
+			} else {
+				$(".glmenu>li.active .glmenu-content").fadeOut(200);
+
+			}
+
+			$(".glmenu>li.active").removeClass("active");
+			$(".mobile-tools").removeClass("out");
+			if(deviceInfo.isPc()) {
+				$("html").removeClass("glmenu-open");
+				!!win.indexSwiper && win.indexSwiper.start();
+				mask.close();
+				console.log(2);
+			}
+		});
+		var mt = $(".mobile-tools").hammer();
+		mt.on("panup", mobileToolsEvents.panUp);
+		mt.on("pandown", mobileToolsEvents.panDown);
+		$(".search-box input[name=searchText]").on("keydown", function(e) {
+			if(e.keyCode == 13) {
+				$(".search-box").submit();
+			}
+		});
+
+		$(".menu-toggle").on("click", function() {
+			var $this = $(this),
+				$html = $("html");
+			if($html.hasClass("glmenu-open")) {
+				$html.removeClass("glmenu-open");
+				mask.close();
+				//$("i", this).removeClass("glfico-close").addClass("glfico-menu");
+				$(".glmenu-content:visible").hide();
+			} else {
+				$html.addClass("glmenu-open");
+				mask.open();
+				//$("i", this).removeClass("glfico-menu").addClass("glfico-close");
+			}
+		});
+		$(".search-box+i").on("click", function() {
+			var $prev = $(this).prev(),
+				$input = $prev.find("input");
+			$prev.toggleClass("active");
+			if($prev.hasClass("active")) {
+				$input.focus();
+			} else {
+				var keyword = $(".search-box input[name=searchText]").val();
+				if (!!keyword) {
+				    var action = $(".search-box").attr("action");
+				    window.location = action + "?searchText=" + keyword;
+				    //$(".search-box input[name=searchText]").keydown();
+					//$(".search-box").submit();
+				} else {
+					$input.blur();
+				}
+			}
+		});
+		$(".search-box i").on("click", function() {
+			var $this = $(this),
+				$box = $(this).parent();
+			if($this.index() == 0) {
+				var keyword = $(".search-box input[name=searchText]").val();
+				if (!!keyword) {
+				    var action = $(".search-box").attr("action");
+				    window.location = action + "?searchText=" + keyword;
+				    //$(".search-box").trigger("submit");
+					//$(".search-box").submit();
+				} else {
+					$box.toggleClass("active");
+				}
+			} else {
+				$box.toggleClass("active");
+			}
+		});
+		// 车型总览快速预约点击
+		//$(document).on("click",".glmenu-content .book-btn",function(){
+		//    $(this).hide();
+		//    $(this).siblings().hide();
+		//    $(this).siblings(".book-mark").fadeIn(1000);
+		//});
+		$(window).on("resize", mediaFn);
+		//$(window).on("scroll", function () {
+		//    if (deviceInfo.isPc()) {
+		//        if (document.documentElement.scrollTop > 100) {
+		//            //$("header").addClass("fixedtop");
+		//        } else {
+		//            //$("header").removeClass("fixedtop");
+		//        }
+		//    }
+		//});
+		//      var searchSlider = $("#search-price-slider").slider({
+		//          range: true
+		//      }).on("change", function (e) {
+		//          $("#search-min-price").val(e.value.newValue[0]);
+		//          $("#search-max-price").val(e.value.newValue[1]);
+		//      });
+
+		//var scroll = new IScroll(".lookall .glmenu-content-body", {
+		//    scrollbars: true
+		//});
+		mediaFn();
+	});
+	window.openMenuSubscribe = function() {
+		$("html").removeClass("glmenu-open");
+		$(".glmenu>li.active").removeClass("active").find(".glmenu-content").fadeOut(200);
+		window.openSubscribe();
+		return false;
+	};
+
+	function mediaFn() {
+		if(deviceInfo.isMobile()) {
+			$(".glmenu>li>a .glfico-down").removeClass("glfico-down").addClass("glfico-more");
+			if(!mobileEventSigned) {
+				//注册移动端事件
+				$("header .brand-all .glmenu-content-body p").on("click", mobileBrandAllClick);
+				$(".mobile-tools .head > i,.mobile-tools .head .ctrl").on("click", mobileToolHeadClick);
+				$(document).on("touchstart", docClick);
+				//header.mobile.setupLinkTap();
+				//$("header .vehicle-model .carslist>li").each(function (i,item) {
+				//    new Hammer(item).on("tap", carEvents.tap.bind(item));
+				//});
+				mobileEventSigned = true;
+			}
+			if(pcEventSigned) {
+				//卸载PC端事件
+				detachCarMouseEvents($("header .vehicle-model .carslist>li"));
+				$(document).off("click", docClick);
+				pcEventSigned = false;
+			}
+		} else {
+			$(".glmenu>li>a .glfico-more").removeClass("glfico-more").addClass("glfico-down");
+			if(mobileEventSigned) {
+				//卸载移动端事件
+				$("header .brand-all .glmenu-content-body p").off("click", mobileBrandAllClick);
+				$(".mobile-tools .head > i,.mobile-tools .head .ctrl").off("click", mobileToolHeadClick);
+				$(document).off("touchstart", docClick);
+				//header.pc.offLinkTap();
+				//$(".vehicle-model .carslist>li").each(function (i, item) {
+				//    new Hammer(item).off("tap", carEvents.tap);
+				//});
+				mobileEventSigned = false;
+			}
+			if(!pcEventSigned) {
+				//注册PC端事件
+				attachCarMouseEvents($("header .vehicle-model .carslist>li"));
+				$(document).on("click", docClick);
+				pcEventSigned = true;
+			}
+		}
+	}
+	var attachCarMouseEvents = win.attachCarMouseEvents = function($cars) {
+		if(deviceInfo.isPc()) {
+			$cars.on("mouseenter", carEvents.mouseenter);
+			$cars.on("mouseleave", carEvents.mouseleave);
+		}
+	}
+	var detachCarMouseEvents = win.detachCarMouseEvents = function($cars) {
+		$cars.off("mouseenter", carEvents.mouseenter);
+		$cars.off("mouseleave", carEvents.mouseleave);
+	}
+
+	function mobileBrandAllClick(e) {
+		var $this = $(this),
+			$li = $this.parent(),
+			$ul = $this.siblings("ul");
+		if(!$ul.is(":animated")) {
+			$li.toggleClass("active");
+			if($li.hasClass("active")) {
+				$ul.slideDown(200);
+			} else {
+				$ul.slideUp(200);
+			}
+		}
+	}
+
+	function mobileToolHeadClick(e) {
+		$(".mobile-tools").toggleClass("active");
+	}
+}(jQuery, window);

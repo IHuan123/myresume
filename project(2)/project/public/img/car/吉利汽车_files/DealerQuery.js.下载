@@ -1,0 +1,149 @@
+﻿var $curLocalInfo = { currentlocal: null, provinceName: "", cityName: "" };
+function MainLngLat(longitude, latitude) {
+    this.longitude = longitude;
+    this.latitude = latitude;
+}
+function MainAutoLocation() {
+    var geolocation;
+    map.plugin('AMap.Geolocation', function () {
+        geolocation = new AMap.Geolocation({
+            enableHighAccuracy: true,//是否使用高精度定位，默认:true
+            timeout: 10000,          //超过10秒后停止定位，默认：无穷大
+            buttonOffset: new AMap.Pixel(10, 20),//定位按钮与设置的停靠位置的偏移量，默认：Pixel(10, 20)
+            zoomToAccuracy: true,      //定位成功后调整地图视野范围使定位位置及精度范围视野内可见，默认：false
+            buttonPosition: 'RB'
+        });
+        //map.addControl(geolocation);
+        geolocation.getCurrentPosition();
+        AMap.event.addListener(geolocation, 'complete', onComplete);//返回定位信息
+        AMap.event.addListener(geolocation, 'error', onError);      //返回定位出错信息
+    });
+    //解析定位结果
+    function onComplete(data) {
+        if (!data.addressComponent) {
+            MainShowCityInfo();
+            return;
+        }
+        var province = data.addressComponent.province;
+        var city = data.addressComponent.city;
+        if (city == "") {
+            city = province;
+        }
+        console.log("高德地图返回信息:" + province + "," + city);
+
+        var str = ['定位成功'];
+        str.push('经度：' + data.position.getLng());
+        str.push('纬度：' + data.position.getLat());
+        $curLocalInfo.currentlocal = new MainLngLat(data.position.getLng(), data.position.getLat());
+        $curLocalInfo.provinceName = province;
+        $curLocalInfo.cityName = city;
+        if (data.accuracy) {
+            str.push('精度：' + data.accuracy + ' 米');
+        }
+        //如为IP精确定位结果则没有精度信息
+        str.push('是否经过偏移：' + (data.isConverted ? '是' : '否'));
+    }
+    //解析定位错误信息
+    function onError(data) {
+        console.log(data);
+        //MainShowCityInfo();
+    }
+}
+function MainShowCityInfo() {
+    //加载城市查询插件
+    AMap.service(["AMap.CitySearch"], function () {
+        //实例化城市查询类
+        var citysearch = new AMap.CitySearch();
+        //自动获取用户IP，返回当前城市
+        citysearch.getLocalCity(function (status, result) {
+            if (status === 'complete' && result.info === 'OK') {
+                if (result && result.city && result.bounds) {
+                    var city = result.city;
+                    var province = result.province;
+                    var centerlat = (result.bounds.northeast.lat + result.bounds.southwest.lat) / 2;
+                    var centerlng = (result.bounds.northeast.lng + result.bounds.southwest.lng) / 2;
+                    $curLocalInfo.currentlocal = new MainLngLat(centerlng, centerlat);
+                    $curLocalInfo.provinceName = province;
+                    $curLocalInfo.cityName = city;
+                }
+            } else {
+                $curLocalInfo.currentlocal = new MainLngLat(120.225651, 30.214795);
+                $curLocalInfo.provinceName = "浙江省";
+                $curLocalInfo.cityName = "杭州市";
+                console.log("您当前所在城市：" + result.info + "");
+            }
+			MainAutoLocation();
+        });
+    });
+}
+//创建地图函数：
+function MainCreateMap() {
+    $("body").append('<div id="YuYueMapContent" style="display:none;"></div>');
+    var map = new AMap.Map('YuYueMapContent', {
+        resizeEnable: true,
+        zoom: 11,
+        center: [116.397428, 39.90923]
+    });
+    window.map = map;
+}
+//创建和初始化地图函数：
+function MainInitMap() {
+    MainCreateMap();//创建地图
+    MainAutoLocation();
+}
+function QuickSearchClearInput(formId) {
+    var $hedeYuYueForm = $("#" + formId);
+    $hedeYuYueForm.find("input[name='YuYueName']").val('');
+    $hedeYuYueForm.find("input[name='YuYuePhone']").val('');
+    //$hedeYuYueForm.find("input[name='YuYueCarName']").val('');
+}
+function QuickSearchSubmit(formId,resultMethod,messageMethod) {
+    var $hedeYuYueForm = $("#" + formId);
+    var name = $hedeYuYueForm.find("input[name='YuYueName']").val();
+    var phone = $hedeYuYueForm.find("input[name='YuYuePhone']").val();
+    var carName = $hedeYuYueForm.find("input[name='YuYueCarName']").val();
+    var successColor = "#11c1f3", errorColor ="#ef473a";
+    if (String(name).IsEmpty()) {
+        resultMethod("请输入姓名", errorColor);
+        return;
+    }
+    if (!String(phone).IsPhoneCode()) {
+        resultMethod("请输入正确的手机号码", errorColor);
+        return;
+    }
+    if (String(carName).IsEmpty()) {
+        resultMethod("请选择需要预约的车", errorColor);
+        return;
+    }
+    // 埋码追加（快速预约）-20180713 Begin
+    if (window.outerWidth <= 812) {
+        var sitemonitorName = carName + "-预约试驾";
+        stm_clicki('send', 'event', '车型总览', '点击-mobile', sitemonitorName);
+    } else {
+        if (formId === 'QuickSearchYuYueFormId') {
+            stm_clicki('send', 'event', '预约试驾', '点击-pc', '快速预约');
+        } else if (formId === 'HedeYuYueFormId') {
+            stm_clicki('send', 'event', '车型总览', '点击-pc', '快速预约');
+        }
+    }
+    // 埋码追加（快速预约）-20180713 End
+
+    $.post("/api/geely/official/post/QuickReservation", {
+        "name": name,
+        "phone": phone,
+        "seriesId": carName,
+        "provinceName": $curLocalInfo.provinceName,
+        "cityName": $curLocalInfo.cityName,
+        "longitude": $curLocalInfo.currentlocal.longitude,
+        "latitude": $curLocalInfo.currentlocal.latitude,
+    }, function (result) {
+        QuickSearchClearInput(formId);
+        resultMethod(result.message, (result.status == "200" ? successColor : errorColor));
+    });
+}
+$(document).ready(function () {
+    if (is_pc()) {
+        //创建和初始化地图
+        MainInitMap();
+    }
+});

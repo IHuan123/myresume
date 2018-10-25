@@ -1,0 +1,176 @@
+﻿.carslider{
+    padding-top:10px;
+    position:relative;
+    overflow:hidden;
+    height:250px;
+    background:#efefef;
+}
+.carslider-box{
+    height:210px;
+}
+.carslider ul{
+    padding:0;
+    margin:0;
+}
+.car-info{
+    margin-top:0px;
+}
+.car-info .title {
+    font-size: 30px !important;
+    font-weight: bold;
+    opacity: 1;
+    transform: scale(1);
+    text-align: center;
+    margin-bottom: 0;
+}
+.car-info .title img{
+    width:19vw;
+}
+.car-info .sub-title{
+    color:#504e4d;
+    opacity:1;
+    transform:scale(1);
+    transition:all .45s ease-in-out;
+    text-align:center;
+    font-size:1.1rem;
+    letter-spacing: 1px;
+}
+.car-info.out .title{
+    opacity:1;
+}
+.car-info.out .sub-title{
+    opacity:0;
+}
+.carlist {
+    display: flex;
+    position: absolute;
+    left: calc(0px - (100vw - 30px)*2/5);
+    bottom: 80px;
+}
+.carlist li{
+    width:calc((100vw - 30px)*3/5);
+    overflow:hidden;
+    display:flex;
+    justify-content:center;
+    align-items:flex-end;
+}
+.carlist li .car{
+    position:relative;
+    display:inline-block;
+}
+.carlist li .car img{
+    width:180px;
+}
+.carlist .car-wheel{
+    position:absolute;
+    background:url(../images/tai.png) 0 0/100% 100% no-repeat;
+    width:30px;
+    height:30px;
+    bottom:6px;
+    rotation-point:center;
+}
+.carlist .car-wheel.front{
+    left:31px;
+}
+.carlist .car-wheel.back{
+    right:20px;
+}
+.carslider.front .car-wheel{
+    animation:car-front .45s linear infinite;
+}
+.carslider.back .car-wheel{
+    animation:car-back .45s linear infinite;
+}
+.carmenu{
+    display:flex;
+    background:#777777;
+    width:100%;
+    flex-wrap:nowrap;
+    position:absolute;
+    bottom:0;
+    z-index:1;
+}
+.carmenu li{
+    flex-grow:1;
+    padding: 10px 0;
+    text-align:center;
+    color:#d8d7d7;
+    background:#777777;
+    transition:all .2s ease-in-out;
+}
+.carmenu li.active{
+    flex-grow:1;
+    text-align:center;
+    color:#FFF;
+    font-weight:bold;
+    /*background-color:#999;*/
+    position:relative;
+}
+.carmenu li.active:after{
+    content:'';
+    width:70%;
+    position:absolute;
+    left:15%;
+    bottom:0;
+    height:2px;
+    background-color:#fff;
+
+}
+.carslider .caption{
+    position:absolute;
+    width:100%;
+    height:100%;
+    color:#FFF;
+    background:rgba(0,0,0,0.8);
+    transition:all .2s ease-in-out;
+    top:100%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+.carslider .caption>div{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+.carslider .caption>div>i{
+    font-size:3.5rem;
+    line-height:1;
+}
+.carslider .caption>div>a{
+    font-size:1.2rem;
+    margin-top:.5rem;
+}
+.carslider .caption .konw-right{
+    position:relative;
+    margin-left:6rem;
+}
+.carslider .caption .konw-right:before{
+    content:"";
+    position:absolute;
+    display:block;
+    height:5rem;
+    border-left:1px solid rgba(255,255,255,.5);
+    top:50%;
+    left:-3rem;
+    transform:translateY(-50%);
+}
+.carslider.show-caption .caption{
+    top:0px;
+}
+@keyframes car-front{
+    0%{
+        transform:rotate(0deg);
+    }
+    100%{
+        transform:rotate(-360deg);
+    }
+}
+@keyframes car-back{
+    0%{
+        transform:rotate(0deg);
+    }
+    100%{
+        transform:rotate(360deg);
+    }
+}
